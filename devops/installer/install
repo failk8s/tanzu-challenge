@@ -11,14 +11,11 @@ declare -A steps
 steps["ingress.1.name"]="ingress"
 steps["ingress.1.path"]="k8s/ingress"
 #
-steps["knative.1.name"]="knative"
-steps["knative.1.path"]="k8s/knative"
+steps["testapp.1.name"]="testapp"
+steps["testapp.1.path"]="k8s/testapp"
 #
 steps["kpack.1.name"]="kpack"
 steps["kpack.1.path"]="k8s/kpack"
-#
-steps["registry.1.name"]="registry"
-steps["registry.1.path"]="k8s/registry"
 #
 steps["tekton.1.name"]="tekton"
 steps["tekton.1.path"]="k8s/tekton"
@@ -26,8 +23,9 @@ steps["tekton.1.path"]="k8s/tekton"
 steps["wavefront.1.name"]="wavefront"
 steps["wavefront.1.path"]="k8s/wavefront"
 
-FULL_DEVOPS_STEPS="ingress registry kpack tekton knative wavefront"
-FULL_OPS_STEPS="ingress registry kpack tekton knative wavefront"
+FULL_DEV_STEPS="ingress testapp"
+FULL_DEVOPS_STEPS="ingress testapp kpack tekton wavefront"
+FULL_OPS_STEPS=""
 
 #install_log=$(mktemp install.log.XXXXXX)
 install_log=install.log
@@ -73,10 +71,10 @@ function install_command {
   [ -z "$app_name" ] || [ -z "$path" ] && echo "Error" && exit 1
 
   # TODO: Optimize this to just query once 
-  IP=$(kubectl get svc/envoy -n tanzu-developer -o jsonpath='{ .spec.clusterIP }' 2> /dev/null)
+  IP=$(kubectl get svc/envoy -n projectcontour -o jsonpath='{ .status.loadBalancer.ingress[0].hostname }' 2> /dev/null | xargs dig +short  | tail -n1 )
   DOMAIN=""
   if [ "$IP" != "" ]; then
-    DOMAIN=" --data-value-yaml domain=$IP.nip.io --data-value-yaml wildcard_domain=.apps.$IP.nip.io "
+    DOMAIN=" --data-value-yaml domain=$IP.nip.io --data-value-yaml wildcard_domain=apps.$IP.nip.io "
   fi
 
   echo "ytt -f ${WORK_DIR}/k8s/values.yaml ${file_opt} ${DOMAIN} -f ${WORK_DIR}/$path/upstream -f ${WORK_DIR}/$path/config -f ${WORK_DIR}/$path/downstream ${overlay_opt} --ignore-unknown-comments | kapp deploy -a $app_name --diff-changes -n default -y -f -"
@@ -114,13 +112,6 @@ function uninstall_steps {
   done
 }
 
-# for step in cert-manager ingress knative kpack kubeapps registry tekton; do
-#   execute_all $step
-# done
-# execute_all tekton
-
-# exit 1
-
 function help {
   echo "This is the ${FUNCNAME[0]} for ${SCRIPT_NAME}"
   echo ""
@@ -128,13 +119,13 @@ function help {
   echo ""
   echo "Command:"
   echo "    ingress            Installs an ingress controller to be used by the platform"
-  echo "    registry           Installs a clusterwide registry to be used by the platform"
   echo "    kpack              Installs KPack to support in cluster builds using CNB"
   echo "    tekton             Installs Tekton to support pipelines"
-  echo "    knative            Installs KNative to support scale to zero"
   echo "    wavefront          Installs Observability integration with Wavefront"
   echo ""
-  echo "    full-dev           Full Developer install (everything except eduk8s)"
+  echo "    full-dev           Developer install"
+  echo "    full-devops        DevOps install"
+  echo "    full-ops           Ops install"
 
   help-options
 }
@@ -219,8 +210,14 @@ function help {
 
 function full {
   local _list=${FULL_OPS_STEPS}
+  if [ "$1" == "ops" ]; then
+    _list=${FULL_OPS_STEPS}
+  fi
   if [ "$1" == "devops" ]; then
     _list=${FULL_DEVOPS_STEPS}
+  fi
+  if [ "$1" == "dev" ]; then
+    _list=${FULL_DEV_STEPS}
   fi
   shift # Remove type of full install
   parse_args $*
@@ -301,9 +298,9 @@ then
       shift # past argument
       execute ingress "$@"
       ;;
-    registry)
+    testapp)
       shift # past argument
-      execute registry "$@"
+      execute testapp "$@"
       ;;
     kpack)
       shift # past argument
@@ -313,26 +310,26 @@ then
       shift # past argument
       execute tekton "$@"
       ;;
-    knative)
-      shift # past argument
-      execute knative "$@"
-      ;;
     wavefront)
       shift # past argument
       execute wavefront "$@"
       ;;
+    full-dev)
+      shift # past argument
+      full dev "$@"
+      ;;
     full-devops)
       shift # past argument
-      full ops "$@"
+      full devops "$@"
       ;;
     full-ops)
       shift # past argument
       full ops "$@"
       ;;
     *)
-      help "ingress|registry|kpack|tekton|knative|wavefront|full-devops|full-ops"
+      help "full-dev|full-devops|full-ops"
       ;;
   esac
 else
-  help "ingress|registry|kpack|tekton|knative|wavefront|full-devops|full-ops"
+  help "full-dev|full-devops|full-ops"
 fi

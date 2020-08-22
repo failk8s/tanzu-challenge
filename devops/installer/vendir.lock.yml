@@ -12,18 +12,6 @@ directories:
   path: k8s/ingress
 - contents:
   - githubRelease:
-      url: https://api.github.com/repos/knative/serving/releases/28325061
-    path: upstream/serving
-  - githubRelease:
-      url: https://api.github.com/repos/knative-sandbox/net-contour/releases/28326148
-    path: upstream/net-contour
-  - manual: {}
-    path: downstream
-  - manual: {}
-    path: config
-  path: k8s/knative
-- contents:
-  - githubRelease:
       url: https://api.github.com/repos/pivotal/kpack/releases/27343776
     path: upstream/kpack
   - manual: {}
@@ -38,7 +26,7 @@ directories:
     path: downstream
   - manual: {}
     path: config
-  path: k8s/registry
+  path: k8s/testapp
 - contents:
   - githubRelease:
       url: https://api.github.com/repos/tektoncd/pipeline/releases/29523427

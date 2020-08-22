@@ -2,12 +2,8 @@
 ---
 domain:
 wildcard_domain:
-org: tanzu
 privileged_clusterrole_name:  vmware-system-tmc-psp-privileged 
 
-ingress:
-  namespace: tanzu-developer
-  type: contour
 registry:
   namespace: tanzu-developer
   name: registry
